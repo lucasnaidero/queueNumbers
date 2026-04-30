@@ -1,34 +1,41 @@
-
+import express from "express";
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
-import express from "express";
 
 const app = express();
-const PORT = 3000;
 
+app.use(express.json());
 
-
-const swaggerDefinition = {
-  openapi: "3.0.0",
-  info: {
-    title: "My API",
-    version: "1.0.0",
-  },
-};
-
-const options = {
-  swaggerDefinition,
-  apis: ["./routes/*.js"], // dove hai le tue route
-};
-
-const swaggerSpec = swaggerJsdoc(options);
-
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-//app.use(express.json());
-
-// Coda in memoria
+// ---------------------
+// STATE (demo queue)
+// ---------------------
 let queue = [];
 
+// ---------------------
+// SWAGGER SETUP
+// ---------------------
+const swaggerSpec = swaggerJsdoc({
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "Queue API",
+            version: "1.0.0",
+            description: "API per gestione coda numerica"
+        }
+    },
+    apis: ["./**/*.js"] // puoi restringere a routes file se vuoi
+});
+
+app.get("/openapi.json", (req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    res.send(swaggerSpec);
+});
+
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// ---------------------
+// 1. ENQUEUE NUMBER
+// ---------------------
 /**
  * @openapi
  * /enqueue:
@@ -81,6 +88,7 @@ app.post('/enqueue', (req, res) => {
 
     queue.push(number);
 
+    // Mantieni solo ultimi 10
     if (queue.length > 10) {
         queue.shift();
     }
@@ -91,6 +99,9 @@ app.post('/enqueue', (req, res) => {
     });
 });
 
+// ---------------------
+// 2. GET QUEUE
+// ---------------------
 /**
  * @openapi
  * /queue:
@@ -98,7 +109,7 @@ app.post('/enqueue', (req, res) => {
  *     summary: Ottiene tutti i numeri in coda
  *     responses:
  *       200:
- *         description: Lista dei numeri
+ *         description: Lista numerica della coda
  *         content:
  *           application/json:
  *             schema:
@@ -110,6 +121,9 @@ app.get('/queue', (req, res) => {
     res.json(queue);
 });
 
+// ---------------------
+// 3. DELETE QUEUE
+// ---------------------
 /**
  * @openapi
  * /queue:
@@ -132,6 +146,13 @@ app.delete('/queue', (req, res) => {
     res.json({ message: 'Coda svuotata' });
 });
 
+// ---------------------
+// START SERVER
+// ---------------------
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
-    console.log(`Server in esecuzione su http://localhost:${PORT}`);
+    console.log(`Server avviato su porta ${PORT}`);
+    console.log(`Docs: http://localhost:${PORT}/docs`);
+    console.log(`OpenAPI: http://localhost:${PORT}/openapi.json`);
 });
