@@ -7,13 +7,15 @@ const app = express();
 app.use(express.json());
 
 // ---------------------
-// STATE (demo queue)
+// STATE
 // ---------------------
 let queue = [];
 
 // ---------------------
-// SWAGGER SETUP
+// SWAGGER SETUP (FIXED)
 // ---------------------
+const PORT = process.env.PORT || 3000;
+
 const swaggerSpec = swaggerJsdoc({
     definition: {
         openapi: "3.0.0",
@@ -21,63 +23,53 @@ const swaggerSpec = swaggerJsdoc({
             title: "Queue API",
             version: "1.0.0",
             description: "API per gestione coda numerica"
-        }
+        },
+
+        // 🔥 IMPORTANTISSIMO per client .NET (NSwag/AutoRest)
+        servers: [
+            {
+                url: process.env.BASE_URL || `http://localhost:${PORT}`
+            }
+        ]
     },
-    apis: ["./**/*.js"] // puoi restringere a routes file se vuoi
+
+    // 🔥 più stabile su Render rispetto a glob generici
+    apis: ["./index.js"]
 });
 
+// JSON contract endpoint
 app.get("/openapi.json", (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
 });
 
+// Swagger UI
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // ---------------------
-// 1. ENQUEUE NUMBER
+// 1. ENQUEUE
 // ---------------------
 /**
  * @openapi
  * /enqueue:
  *   post:
  *     summary: Inserisce un numero in coda
- *     description: Aggiunge un numero alla queue mantenendo solo gli ultimi 10 elementi
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - number
+ *             required: [number]
  *             properties:
  *               number:
  *                 type: number
  *                 example: 42
  *     responses:
  *       200:
- *         description: Numero aggiunto con successo
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Numero aggiunto
- *                 queue:
- *                   type: array
- *                   items:
- *                     type: number
+ *         description: OK
  *       400:
  *         description: Input non valido
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 error:
- *                   type: string
  */
 app.post('/enqueue', (req, res) => {
     const { number } = req.body;
@@ -88,7 +80,6 @@ app.post('/enqueue', (req, res) => {
 
     queue.push(number);
 
-    // Mantieni solo ultimi 10
     if (queue.length > 10) {
         queue.shift();
     }
@@ -106,10 +97,10 @@ app.post('/enqueue', (req, res) => {
  * @openapi
  * /queue:
  *   get:
- *     summary: Ottiene tutti i numeri in coda
+ *     summary: Ottiene la coda
  *     responses:
  *       200:
- *         description: Lista numerica della coda
+ *         description: OK
  *         content:
  *           application/json:
  *             schema:
@@ -122,7 +113,7 @@ app.get('/queue', (req, res) => {
 });
 
 // ---------------------
-// 3. DELETE QUEUE
+// 3. CLEAR QUEUE
 // ---------------------
 /**
  * @openapi
@@ -131,15 +122,7 @@ app.get('/queue', (req, res) => {
  *     summary: Svuota la coda
  *     responses:
  *       200:
- *         description: Coda svuotata
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Coda svuotata
+ *         description: OK
  */
 app.delete('/queue', (req, res) => {
     queue = [];
@@ -149,10 +132,8 @@ app.delete('/queue', (req, res) => {
 // ---------------------
 // START SERVER
 // ---------------------
-const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
     console.log(`Server avviato su porta ${PORT}`);
-    console.log(`Docs: http://localhost:${PORT}/docs`);
-    console.log(`OpenAPI: http://localhost:${PORT}/openapi.json`);
+    console.log(`Docs: /docs`);
+    console.log(`OpenAPI: /openapi.json`);
 });
