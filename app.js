@@ -24,7 +24,7 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use(express.json());
+//app.use(express.json());
 
 // Coda in memoria
 let queue = [];
