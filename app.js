@@ -21,7 +21,7 @@ const swaggerSpec = {
     },
     servers: [
         {
-            url: process.env.BASE_URL || "http://localhost:3000"
+            url: process.env.BASE_URL || "https://your-app.onrender.com"
         }
     ],
     paths: {
